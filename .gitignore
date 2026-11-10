@@ -1,0 +1,9 @@
+.vscode/
+vendor/
+node_modules/
+
+/App/config/db.php
+/App/config/app.php
+*.log
+composer.lock
+.env
