@@ -531,7 +531,7 @@ class Express extends Base
             $errno  = curl_errno( $ch );
             $error  = curl_error( $ch );
             $status = (int) curl_getinfo( $ch, CURLINFO_RESPONSE_CODE );
-            curl_close( $ch );
+            //curl_close( $ch );
 
             if ( $errno && 23 !== $errno ) { // 23 — мы сами прервали чтение тела
                 //throw new RuntimeException( $error );
