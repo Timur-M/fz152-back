@@ -10,11 +10,11 @@ class Cron extends Base
     
     public static function work(){
         $jobs = Queue::get_jobs();
-        $result = 'nothing'.PHP_EOL;
+        $result = '';
         if(!empty($jobs)){
             $result = Worker::do_jobs($jobs);
         }
-        echo $result;
+        if(!empty($result)) echo $result;
     }
 
 }
