@@ -15,7 +15,9 @@ $router->post('/register', '\App\Controllers\Jwt@register');
 $router->post('/approve', '\App\Controllers\Jwt@approve');
 $router->post('/recover', '\App\Controllers\Jwt@recover');
 
+$router->post('/get_result', '\App\Controllers\Api@get_result');
 $router->post('/api/{version}/{method}', '\App\Controllers\Api@main');
+$router->post('/admin_api/{version}/{method}', '\App\Controllers\Admin_api@main');
 
 
 $router->run();

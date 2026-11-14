@@ -658,4 +658,333 @@ class Express extends Base
         }
         return true;
     }
+
+    public static function sg_header( $headers, $name ) {
+        $name = strtolower( $name );
+        return isset( $headers[ $name ][0] ) ? $headers[ $name ][0] : null;
+    }
+
+    /**
+    * Полный аналог функции esc_url_raw() из WordPress для чистого PHP.
+    * Очищает URL для сохранения в БД или использования в редиректах (не кодирует & в &#038;).
+    *
+    * @param string        $url       URL-адрес для очистки.
+    * @param string[]|null $protocols Необязательный массив разрешенных протоколов.
+    * @return string Очищенный URL или пустая строка, если протокол запрещен.
+    */
+    public static function esc_url_raw(string $url, ?array $protocols = null): string 
+    {
+        $url = trim($url);
+
+        if ('' === $url) {
+            return $url;
+        }
+
+        // 1. Удаляем пробелы внутри URL (кодируем пробел, если он не в начале/конце)
+        $url = str_replace(' ', '%20', $url);
+
+        // 2. Удаляем опасные символы (переводы строк, управляющие символы, кавычки, скобки и т.д.)
+        $url = preg_replace('|[^a-z0-9-~+_.?#=!&;,/:%@$\|*\'()\[\]\\x80-\\xff]|i', '', $url);
+
+        if ('' === $url) {
+            return $url;
+        }
+
+        // 3. Защита от инъекций в URL-схемах (например, удаляем %0d и %0a - символы возврата каретки и новой строки)
+        if (0 !== stripos($url, 'mailto:')) {
+            $strip = ['%0d', '%0a', '%0D', '%0A'];
+            $url   = self::_deep_replace($strip, $url);
+        }
+
+        // 4. Исправляем дублирующиеся слэши после двоеточия (например, http://///example.com -> http://example.com)
+        $url = str_replace(';//', '://', $url);
+
+        // 5. Если в начале нет протокола, но и не относительный путь (/ # ?), и нет расширения файла (.php, .html) — подставляем http://
+        if (
+            !str_contains($url, ':') &&
+            !in_array($url[0], ['/', '#', '?'], true) &&
+            !preg_match('/^[a-z0-9-]+?\.php/i', $url)
+        ) {
+            $url = 'http://' . $url;
+        }
+
+        // 6. Если протоколы не переданы явно, используем стандартный белый список WordPress
+        if (!is_array($protocols)) {
+            $protocols = [
+                'http', 'https', 'ftp', 'ftps', 'mailto', 'news', 'irc', 'irc6', 
+                'ircs', 'gopher', 'nntp', 'feed', 'telnet', 'mms', 'rtsp', 'sms', 
+                'svn', 'tel', 'fax', 'xmpp', 'webcal', 'urn'
+            ];
+        }
+
+        // 7. Проверяем, разрешен ли протокол (защита от javascript:, data:, vbscript: и др.)
+        if (!self::_wp_is_allowed_protocol($url, $protocols)) {
+            return '';
+        }
+
+        return $url;
+    }
+
+    /**
+    * Рекурсивно удаляет заданные подстроки из строки (аналог _deep_replace из WP).
+    * Защищает от обхода фильтров вида "%0%0dd" -> "%0d".
+    */
+    public static function _deep_replace(array $search, string $subject): string 
+    {
+        $found = true;
+        while ($found) {
+            $found = false;
+            foreach ($search as $val) {
+                while (str_contains($subject, $val)) {
+                    $found   = true;
+                    $subject = str_replace($val, '', $subject);
+                }
+            }
+        }
+        return $subject;
+    }
+
+    /**
+    * Проверяет, входит ли протокол URL в белый список (аналог wp_kses_bad_protocol из WP).
+    */
+    public static function _wp_is_allowed_protocol(string $url, array $allowed_protocols): bool 
+    {
+        // Относительные пути и якоря без протокола считаются безопасными
+        if (str_starts_with($url, '/') || str_starts_with($url, '#') || str_starts_with($url, '?')) {
+            return true;
+        }
+
+        // Декодируем HTML-сущности и URL-кодирование в схеме, чтобы поймать обфускацию (например, java&#x09;script:)
+        $decoded = html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $decoded = preg_replace('/[\x00-\x20\x7f]/', '', $decoded);
+
+        if (preg_match('/^([a-z0-9+.-]+):/i', $decoded, $matches)) {
+            $protocol = strtolower($matches[1]);
+            return in_array($protocol, array_map('strtolower', $allowed_protocols), true);
+        }
+
+        return true;
+    }
+
+    public static function sg_run_audit( $raw_url ) {
+        $host = self::sg_normalize_target( $raw_url );
+        self::sg_resolve_public_ip( $host );
+
+        $started = microtime( true );
+        $checks  = array( self::sg_check_https( $host ), self::sg_check_certificate( $host ) );
+
+        $headers  = null;
+        $final    = null;
+        $is_https = false;
+        foreach ( array( 'https', 'http' ) as $scheme ) {
+            try {
+                list( $final, , $headers ) = self::sg_fetch( "$scheme://$host/", false );
+                $is_https                  = 0 === strpos( $final, 'https://' );
+                break;
+            
+            } catch ( \Exception $e ) {
+                continue;
+            }
+        }
+        if ( null === $headers ) {
+            //throw new SG_Audit_Exception( 'Сайт не отвечает' );
+        }
+
+        $checks[] = self::sg_check_headers( $headers );
+        $checks[] = self::sg_check_disclosure( $headers );
+        $checks[] = self::sg_check_cookies( $headers, $is_https );
+
+        $points = array( 'ok' => 20, 'warn' => 10, 'fail' => 0 );
+        $score  = 0;
+        foreach ( $checks as $c ) {
+            $score += $points[ $c['status'] ];
+        }
+        return array(
+            'host'       => $host,
+            'finalUrl'   => $final,
+            'score'      => $score,
+            'checkedAt'  => date( 'd.m.Y H:i' ),
+            'durationMs' => (int) ( ( microtime( true ) - $started ) * 1000 ),
+            'checks'     => $checks,
+        );
+    }
+
+    public static function sg_check_https( $host ) {
+        $items    = array();
+        $https_ok = false;
+        try {
+            list( , $status ) = self::sg_fetch( "https://$host/", false );
+            $https_ok         = true;
+            $items[]          = self::sg_item( true, "Сайт отвечает по HTTPS (код $status)" );
+        } catch ( \Exception $e ) {
+            $items[] = self::sg_item( false, 'Сайт не отвечает по HTTPS' );
+        }
+
+        $redirect_ok = false;
+        try {
+            list( $final, , , $chain ) = self::sg_fetch( "http://$host/", false );
+            $redirect_ok               = 0 === strpos( $final, 'https://' );
+            if ( $redirect_ok ) {
+                $first   = $chain ? $chain[0]['status'] : '-';
+                $items[] = self::sg_item( true, "HTTP перенаправляет на HTTPS (код $first)" );
+            } else {
+                $items[] = self::sg_item( false, 'HTTP-версия открывается без перенаправления на HTTPS' );
+            }
+        } catch ( \Exception $e ) {
+            $items[]     = self::sg_item( null, 'HTTP-версия недоступна (порт 80 закрыт)' );
+            $redirect_ok = $https_ok;
+        }
+
+        if ( $https_ok && $redirect_ok ) {
+            list( $st, $summ ) = array( 'ok', 'Соединение шифруется, HTTP перенаправляется на HTTPS' );
+        } elseif ( $https_ok ) {
+            list( $st, $summ ) = array( 'warn', 'HTTPS есть, но посетители могут попасть на незащищённую версию' );
+        } else {
+            list( $st, $summ ) = array( 'fail', 'Данные посетителей передаются без шифрования' );
+        }
+        return self::sg_result( 'https', 'HTTPS и перенаправление', $st, $summ, $items,
+            'Включите HTTPS и постоянный редирект 301 с http:// на https://.' );
+    }
+
+    public static function sg_tls_connect( $ip, $host, $verify ) {
+        $ssl = array(
+            'peer_name'         => $host,
+            'SNI_enabled'       => true,
+            'verify_peer'       => $verify,
+            'verify_peer_name'  => $verify,
+            'allow_self_signed' => ! $verify,
+            'capture_peer_cert' => true,
+        );
+        
+        $ctx    = stream_context_create( array( 'ssl' => $ssl ) );
+        $target = 'ssl://' . ( false !== strpos( $ip, ':' ) ? "[$ip]" : $ip ) . ':443';
+        $fp     = @stream_socket_client( $target, $errno, $errstr, SG_TIMEOUT, STREAM_CLIENT_CONNECT, $ctx );
+        if ( ! $fp ) {
+            return null;
+        }
+        $params = stream_context_get_params( $fp );
+        $meta   = stream_get_meta_data( $fp );
+        fclose( $fp );
+        return array(
+            'cert'     => isset( $params['options']['ssl']['peer_certificate'] ) ? openssl_x509_parse( $params['options']['ssl']['peer_certificate'] ) : null,
+            'protocol' => isset( $meta['crypto']['protocol'] ) ? $meta['crypto']['protocol'] : '',
+        );
+    }
+
+    public static function sg_check_certificate( $host ) {
+        $ip     = self::sg_resolve_public_ip( $host );
+        $advice = "Установите действительный сертификат (например, бесплатный Let's Encrypt) с полной цепочкой.";
+        $conn   = self::sg_tls_connect( $ip, $host, true );
+
+        if ( ! $conn ) {
+            $raw = self::sg_tls_connect( $ip, $host, false );
+            if ( ! $raw ) {
+                return self::sg_result( 'cert', 'SSL-сертификат', 'fail', 'Не удалось установить защищённое соединение',
+                    array( self::sg_item( false, 'Порт 443 недоступен или TLS не настроен' ) ),
+                    'Настройте TLS-сертификат на сервере.' );
+            }
+            $reason = 'сертификат не доверен браузерами или выдан для другого домена';
+            if ( ! empty( $raw['cert']['validTo_time_t'] ) && $raw['cert']['validTo_time_t'] < time() ) {
+                $reason = 'срок действия истёк ' . date( 'd.m.Y', $raw['cert']['validTo_time_t'] );
+            }
+            return self::sg_result( 'cert', 'SSL-сертификат', 'fail', 'Браузеры покажут предупреждение «Небезопасно»',
+                array( self::sg_item( false, "Сертификат не прошёл проверку: $reason" ) ), $advice );
+        }
+
+        $cert      = $conn['cert'];
+        $valid_to  = isset( $cert['validTo_time_t'] ) ? (int) $cert['validTo_time_t'] : time();
+        $days_left = (int) floor( ( $valid_to - time() ) / 3600*24 );
+        $issuer    = $cert['issuer']['O'] ?? ( $cert['issuer']['CN'] ?? 'неизвестно' );
+        $proto     = $conn['protocol'] ? $conn['protocol'] : 'неизвестен';
+        $modern    = in_array( $proto, array( 'TLSv1.2', 'TLSv1.3' ), true );
+
+        $items = array(
+            self::sg_item( true, "Сертификат действителен, выдан: $issuer" ),
+            self::sg_item( $days_left > 14, 'Истекает ' . date( 'd.m.Y', $valid_to ) . " (осталось $days_left дн.)" ),
+            self::sg_item( $modern, "Протокол соединения: $proto" ),
+        );
+        if ( $days_left <= 14 || ! $modern ) {
+            list( $st, $summ ) = array( 'warn', 'Сертификат скоро истечёт или используется устаревший протокол' );
+        } else {
+            list( $st, $summ ) = array( 'ok', 'Сертификат действителен и корректно настроен' );
+        }
+        return self::sg_result( 'cert', 'SSL-сертификат', $st, $summ, $items,
+            'Настройте автопродление сертификата и отключите TLS 1.0/1.1.' );
+    }
+
+    public static function sg_check_headers( $headers ) {
+        $list    = array(
+            'Strict-Transport-Security' => 'HSTS — запрет открытия сайта по HTTP',
+            'Content-Security-Policy'   => 'CSP — защита от XSS и внедрения скриптов',
+            'X-Frame-Options'           => 'Защита от кликджекинга (встраивания в iframe)',
+            'X-Content-Type-Options'    => 'Запрет подмены MIME-типов',
+            'Referrer-Policy'           => 'Контроль утечки адресов страниц',
+            'Permissions-Policy'        => 'Ограничение доступа к камере, микрофону, геолокации',
+        );
+        $items   = array();
+        $present = 0;
+        foreach ( $list as $name => $desc ) {
+            $val = self::sg_header( $headers, $name );
+            if ( 'X-Frame-Options' === $name && ! $val && false !== strpos( (string) self::sg_header( $headers, 'Content-Security-Policy' ), 'frame-ancestors' ) ) {
+                $val = 'frame-ancestors в CSP';
+            }
+            $ok       = (bool) $val;
+            $present += $ok ? 1 : 0;
+            $items[]  = self::sg_item( $ok, "$name: " . ( $ok ? 'есть' : 'отсутствует' ) . " — $desc" );
+        }
+        $total = count( $list );
+        $st    = $present >= 5 ? 'ok' : ( $present >= 3 ? 'warn' : 'fail' );
+        return self::sg_result( 'headers', 'Заголовки безопасности', $st, "Настроено $present из $total ключевых заголовков", $items,
+            'Добавьте недостающие заголовки в конфигурацию веб-сервера (nginx/Apache) или CDN.' );
+    }
+
+    public static function sg_check_disclosure( $headers ) {
+        $items = array();
+        $leaks = 0;
+        foreach ( array( 'Server', 'X-Powered-By', 'X-AspNet-Version', 'X-AspNetMvc-Version', 'X-Generator' ) as $name ) {
+            $val = self::sg_header( $headers, $name );
+            if ( ! $val ) {
+                continue;
+            }
+            $has_version = (bool) preg_match( '/\d+\.\d+/', $val );
+            $is_leak     = $has_version || 'Server' !== $name;
+            $leaks      += $is_leak ? 1 : 0;
+            $note        = $has_version ? 'раскрыта версия ПО' : ( $is_leak ? 'раскрыта технология' : 'без версии' );
+            $items[]     = self::sg_item( ! $is_leak, "$name: $val — $note" );
+        }
+        if ( ! $items ) {
+            $items[] = self::sg_item( true, 'Сервер не сообщает о своём ПО и версиях' );
+        }
+        $st   = 0 === $leaks ? 'ok' : ( 1 === $leaks ? 'warn' : 'fail' );
+        $summ = 0 === $leaks ? 'Версии ПО скрыты' : 'Сервер подсказывает злоумышленникам, какие уязвимости искать';
+        return self::sg_result( 'disclosure', 'Раскрытие информации о сервере', $st, $summ, $items,
+            'Скройте версии: server_tokens off (nginx), ServerTokens Prod (Apache), expose_php = Off.' );
+    }
+
+    public static function sg_check_cookies( $headers, $is_https ) {
+        $cookies = isset( $headers['set-cookie'] ) ? $headers['set-cookie'] : array();
+        $advice  = 'Добавьте cookie флаги Secure, HttpOnly и SameSite=Lax/Strict — это защищает сессии от кражи.';
+        if ( ! $cookies ) {
+            return self::sg_result( 'cookies', 'Безопасность cookie', 'ok', 'На главной странице cookie не устанавливаются',
+                array( self::sg_item( true, 'Сайт не выдаёт cookie при первом заходе' ) ),
+                'При появлении cookie выставляйте флаги Secure, HttpOnly и SameSite.' );
+        }
+        $items = array();
+        $bad   = 0;
+        foreach ( array_slice( $cookies, 0, 8 ) as $c ) {
+            $name    = trim( explode( '=', $c, 2 )[0] );
+            $low     = strtolower( $c );
+            $missing = array();
+            foreach ( array( 'Secure' => '; secure', 'HttpOnly' => '; httponly', 'SameSite' => 'samesite=' ) as $flag => $needle ) {
+                if ( false === strpos( $low, $needle ) && ! ( 'Secure' === $flag && ! $is_https ) ) {
+                    $missing[] = $flag;
+                }
+            }
+            $bad    += $missing ? 1 : 0;
+            $items[] = self::sg_item( ! $missing, "$name: " . ( $missing ? 'нет флагов ' . implode( ', ', $missing ) : 'все флаги на месте' ) );
+        }
+        $st   = 0 === $bad ? 'ok' : ( $bad < count( $items ) ? 'warn' : 'fail' );
+        $summ = $bad ? "Проблемы у $bad из " . count( $items ) . ' cookie' : 'Все cookie защищены флагами';
+        return self::sg_result( 'cookies', 'Безопасность cookie', $st, $summ, $items, $advice );
+    }
 }

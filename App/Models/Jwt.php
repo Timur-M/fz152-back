@@ -56,7 +56,7 @@ class Jwt extends Base
         return json_decode(openssl_decrypt($ciphertext, $cipher, $key, 0, $iv),true);
     }
 
-    public static function get_user(array $post): array {
+    public static function get_user(array $post) {
         self::connect();
         $cond = '';
         $bind = [];
@@ -69,6 +69,10 @@ class Jwt extends Base
         if(isset($post['reg_code'])){
             $cond .= ' AND reg_code = :reg_code ';
             $bind['reg_code'] = $post['reg_code'];
+        }
+
+        if(isset($post['admin'])){
+            $cond .= ' AND is_admin = 1 ';
         }
 
         if($cond != ''){
@@ -84,7 +88,8 @@ class Jwt extends Base
 
     public static function reg_user(array $post) {
         self::connect();
-        $stmt = static::$pdo->prepare("INSERT INTO users (email,password,reg_code) VALUES (:email,:password,:reg_code)");
+        $stmt = static::$pdo->prepare("INSERT INTO users (email,password,reg_code,date_add) 
+            VALUES (:email,:password,:reg_code,NOW() AT TIME ZONE 'UTC')");
         $stmt->execute([
             'email' => $post['email'],
             'password' => password_hash($post['password'], PASSWORD_DEFAULT),

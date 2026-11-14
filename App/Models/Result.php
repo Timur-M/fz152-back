@@ -1,0 +1,54 @@
+<?php
+
+namespace App\Models;
+
+class Result extends Base
+{
+    public static function add_result($post){
+        self::connect();
+        
+        $stmt = static::$pdo->prepare("INSERT INTO check_results (date_time,user_id,site_id,check_type,
+        doc_urls,recom_url_token,amount,recom_content) VALUES (NOW() AT TIME ZONE 'UTC',:user_id,:site_id,:check_type,
+        :doc_urls,:recom_url_token,:amount,:recom_content)");
+        $stmt->execute([
+            'user_id' => $post['user_id'],
+            'site_id' => $post['site_id'],
+            'check_type' => $post['check_type'],
+            'doc_urls' => '{}',
+            'recom_url_token' => uniqid(),
+            'amount' => $post['amount'],
+            'recom_content' => json_encode($post['result'],JSON_UNESCAPED_UNICODE),
+        ]);
+        
+        return true;
+    }
+
+    public static function get_result($post){
+        self::connect();
+        if(!empty($post['with_site'])){
+            $select = ", s.url ";
+            $join = ' LEFT JOIN sites s ON s.id = cr.site_id ';
+        }
+        $stmt = static::$pdo->prepare("SELECT cr.recom_content, cr.check_type ".$select." 
+        FROM check_results cr
+        ".$join."
+        WHERE cr.recom_url_token = :t");
+        $stmt->execute([
+            't' => $post['result_token'],
+        ]);
+        $result = $stmt->fetch();
+        return $result;
+    }
+
+    public static function get_results($post){
+        self::connect();
+        $stmt = static::$pdo->prepare("SELECT *,
+        to_char((date_time + interval '3 hours'),'DD-MM-YYYY HH24:MI') as date_time
+         FROM check_results WHERE site_id = :id");
+        $stmt->execute([
+            'id' => $post['id'],
+        ]);
+        $result = $stmt->fetchAll();
+        return $result;
+    }
+}

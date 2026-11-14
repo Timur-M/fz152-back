@@ -6,6 +6,8 @@ use App\Models\Site;
 use App\Models\Express;
 use App\Models\User;
 use App\Models\Balance;
+use App\Models\Queue;
+use App\Models\Result;
 
 
 class Api extends Base
@@ -67,10 +69,10 @@ class Api extends Base
         return ['status' => 'ok','user' => $user];
     }
 
-    public static function add_balance($main_data){
+    public static function add_order($main_data){
         $post = self::post();
         $post['user_id'] = $main_data['user_id'];
-        $user = Balance::add_balance($post);
+        $user = Balance::add_order($post);
         return ['status' => 'ok'];
     }
 
@@ -82,5 +84,24 @@ class Api extends Base
     public static function get_discounts($main_data){
         $discounts = Balance::get_discounts();
         return ['status' => 'ok','discounts' => $discounts];
+    }
+
+    public static function add_to_check_queue($main_data){
+        $post = self::post();
+        $post['user_id'] = $main_data['user_id'];
+        $result = Queue::add_job($post);
+        return ['status' => 'ok'];
+    }
+
+    public static function get_result(){
+        $post = self::post();
+        $result = Result::get_result($post);
+        echo json_encode(['status' => 'ok','result' => $result]);
+    }
+
+    public static function get_results(){
+        $post = self::post();
+        $result = Result::get_results($post);
+        return ['status' => 'ok','results' => $result];
     }
 }
