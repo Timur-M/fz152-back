@@ -99,9 +99,17 @@ class Api extends Base
         echo json_encode(['status' => 'ok','result' => $result]);
     }
 
-    public static function get_results(){
+    public static function get_results($main_data){
         $post = self::post();
         $result = Result::get_results($post);
         return ['status' => 'ok','results' => $result];
+    }
+
+    public static function update_user($main_data){
+        $post = self::post();
+        $post = $post['user'];
+        $post['user_id'] = $main_data['user_id'];
+        $result = User::update_user($post);
+        return ['status' => 'ok'];
     }
 }
