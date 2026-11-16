@@ -118,6 +118,7 @@ class Balance extends Base
         $stmt = static::$pdo->prepare("SELECT * FROM check_results WHERE user_id=:id");
         $stmt->execute(['id' => $user_id]);
         foreach($stmt->fetchAll() as $cr){
+            if(!isset($balance['pack_'.$cr['check_type']])) $balance['pack_'.$cr['check_type']] = 0;
             $balance['pack_'.$cr['check_type']] -= 1;
         }
 
