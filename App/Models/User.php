@@ -6,7 +6,7 @@ class User extends Base
 {
     public static function get_user($id){
         self::connect();
-        $stmt = static::$pdo->prepare("SELECT id,inn,phone,org_name FROM users WHERE id=:id");
+        $stmt = static::$pdo->prepare("SELECT id,inn,phone,org_name,balance,qtys FROM users WHERE id=:id");
         $stmt->execute(['id' => $id]);
         $result = $stmt->fetch();
         return $result;
