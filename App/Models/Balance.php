@@ -7,21 +7,24 @@ class Balance extends Base
     public static function add_order($post){
         self::connect();
 
-        $post['amount_pay'] = $post['amount'];
-        $post['amount_set'] = $post['amount'];
-
         if(!empty($post['pack_152']) or !empty($post['pack_sec'])){
-            $post['amount_pay'] = self::calc_discount($post);
-            $post['amount_set'] = self::calc_discountless($post);
+            $post['amount'] = self::calc_discountless($post);
+            if(!empty($post['pack_152'])){
+                $qtys['pack_152'] = $post['pack_152'];
+            }
+            if(!empty($post['pack_sec'])){
+                $qtys['pack_sec'] = $post['pack_sec'];
+            }
+            $qtys = json_encode($qtys);
         }
 
-        $stmt = static::$pdo->prepare("INSERT INTO payment_orders (user_id,amount_pay,amount_set,date_create,is_auto_pay) 
-        VALUES (:user_id,:amount_pay,:amount_set,NOW() AT TIME ZONE 'UTC',:is_auto_pay) RETURNING id");
+        $stmt = static::$pdo->prepare("INSERT INTO payment_orders (user_id,amount,date_create,is_auto_pay,qtys) 
+        VALUES (:user_id,:amount,NOW() AT TIME ZONE 'UTC',:is_auto_pay,:qtys) RETURNING id");
         $stmt->execute([
-            $post['user_id'],
-            $post['amount_pay'],
-            $post['amount_set'],
+            'user_id' => $post['user_id'],
+            'amount' => $post['amount'],
             !empty($post['is_auto_pay']) ? $post['is_auto_pay'] : 0,
+            'qtys' => !empty($qtys) ? $qtys : NUll,
         ]);
         $result = $stmt->fetch();
         return $result;
