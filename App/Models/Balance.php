@@ -79,7 +79,12 @@ class Balance extends Base
 
     public static function get_orders($post){
         self::connect();
-        $stmt = static::$pdo->prepare("SELECT * FROM payment_orders WHERE user_id = :user_id");
+        $stmt = static::$pdo->prepare("SELECT * 
+        to_char((date_create + interval '3 hours'),'DD-MM-YYYY HH24:MI') as date_create,
+        CASE WHEN date_update IS NOT NULL THEN
+        to_char((date_update + interval '3 hours'),'DD-MM-YYYY HH24:MI') 
+        ELSE NULL END as date_update
+        FROM payment_orders WHERE user_id = :user_id");
         $stmt->execute(['user_id' => $post['user_id']]);
         $result = $stmt->fetchAll();
         return $result;
