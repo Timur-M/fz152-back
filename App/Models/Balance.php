@@ -76,4 +76,12 @@ class Balance extends Base
         }
         return $discounts;
     }  
+
+    public static function get_orders($post){
+        self::connect();
+        $stmt = static::$pdo->prepare("SELECT * FROM payment_orders WHERE user_id = :user_id");
+        $stmt->execute(['user_id' => $post['user_id']]);
+        $result = $stmt->fetchAll();
+        return $result;
+    }
 }

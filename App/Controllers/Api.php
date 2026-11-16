@@ -112,4 +112,11 @@ class Api extends Base
         $result = User::update_user($post);
         return ['status' => 'ok'];
     }
+
+    public static function get_orders($main_data){
+        $post = self::post();
+        $post['user_id'] = $main_data['user_id'];
+        $orders = Balance::get_orders($post);
+        return ['status' => 'ok','orders' => $orders];
+    }
 }
