@@ -92,4 +92,45 @@ class Balance extends Base
         $result = $stmt->fetchAll();
         return $result;
     }
+
+    public static function calc_balance($user_id){
+        self::connect();
+        $balance = [];
+        $stmt = static::$pdo->prepare("SELECT * FROM payment_orders WHERE status = 1 AND user_id=:id");
+        $stmt->execute(['id' => $user_id]);
+        foreach($stmt->fetchAll() as $o){
+            if($o['qtys'] != NULL){
+                $qtys = json_decode($o['qtys'],true);
+                foreach($qtys as $qk => $qv){
+                    if(!isset($balance[$qk])) $balance[$qk] = 0;
+                    $balance[$qk] += $qv;
+                }
+            }
+            if($o['amount'] > 0){
+                if(!isset($balance['amount'])) $balance['amount'] = 0;
+                $balance['amount'] += $o['amount'];
+            }
+            if($o['from_balance'] > 0){
+                if(!isset($balance['amount'])) $balance['amount'] = 0;
+                $balance['amount'] -= $o['from_balance'];
+            }
+        }
+        $stmt = static::$pdo->prepare("SELECT * FROM check_results WHERE user_id=:id");
+        $stmt->execute(['id' => $user_id]);
+        foreach($stmt->fetchAll() as $cr){
+            $balance['pack_'.$cr['check_type']] -= 1;
+        }
+
+        $user_qtys = $balance;
+        unset($user_qtys['amount']);
+
+        $stmt = static::$pdo->prepare("UPDATE users SET balance=:b,qtys=:q WHERE id=:id");
+        $stmt->execute([
+            'id' => $user_id,
+            'balance' => $balance['amount'],
+            'qtys' => $user_qtys,
+        ]);
+
+        return $balance;
+    }
 }

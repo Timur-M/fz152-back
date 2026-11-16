@@ -119,4 +119,11 @@ class Api extends Base
         $orders = Balance::get_orders($post);
         return ['status' => 'ok','orders' => $orders];
     }
+
+    public static function calc_balance($main_data){
+        $post = self::post();
+        $post['user_id'] = $main_data['user_id'];
+        $orders = Balance::calc_balance($main_data['user_id']);
+        return ['status' => 'ok'];
+    }
 }
