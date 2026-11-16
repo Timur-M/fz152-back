@@ -129,7 +129,7 @@ class Balance extends Base
         $stmt->execute([
             'id' => $user_id,
             'b' => !empty($balance['amount']) ? $balance['amount'] : 0,
-            'q' => $user_qtys,
+            'q' => json_encode($user_qtys),
         ]);
 
         return $balance;
