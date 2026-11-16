@@ -106,7 +106,7 @@ class Balance extends Base
                     $balance[$qk] += $qv;
                 }
             }
-            if($o['amount'] > 0){
+            if($o['amount'] > 0 and $o['qtys'] == NULL){
                 if(!isset($balance['amount'])) $balance['amount'] = 0;
                 $balance['amount'] += $o['amount'];
             }
