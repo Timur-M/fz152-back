@@ -128,8 +128,8 @@ class Balance extends Base
         $stmt = static::$pdo->prepare("UPDATE users SET balance=:b,qtys=:q WHERE id=:id");
         $stmt->execute([
             'id' => $user_id,
-            'balance' => !empty($balance['amount']) ? $balance['amount'] : 0,
-            'qtys' => $user_qtys,
+            'b' => !empty($balance['amount']) ? $balance['amount'] : 0,
+            'q' => $user_qtys,
         ]);
 
         return $balance;
