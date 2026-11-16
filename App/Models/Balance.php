@@ -23,7 +23,7 @@ class Balance extends Base
         $stmt->execute([
             'user_id' => $post['user_id'],
             'amount' => $post['amount'],
-            !empty($post['is_auto_pay']) ? $post['is_auto_pay'] : 0,
+            'is_auto_pay' => !empty($post['is_auto_pay']) ? $post['is_auto_pay'] : 0,
             'qtys' => !empty($qtys) ? $qtys : NUll,
         ]);
         $result = $stmt->fetch();
