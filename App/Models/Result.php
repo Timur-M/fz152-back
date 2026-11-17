@@ -59,6 +59,7 @@ class Result extends Base
         $stmt->execute([
             'id' => $post['id'],
             'result' => json_encode($post['result'],JSON_UNESCAPED_UNICODE),
+            'status' =>$post['status'],
         ]);
         $result = $stmt->fetchAll();
         return $result;
