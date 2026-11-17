@@ -126,4 +126,10 @@ class Api extends Base
         $orders = Balance::calc_balance($main_data['user_id']);
         return ['status' => 'ok'];
     }
+
+    public static function tbank_webhook(){
+        $post = self::post();
+        Balance::tbank_webhook($post);
+        echo 'OK';
+    }
 }

@@ -24,7 +24,13 @@ class Balance extends Base
         $client = new TinkoffAcquiringAPIClient('1794229583583DEMO', 'hGYO8REMbB5Fu5mE',[
             'base_uri' => 'https://rest-api-test.tinkoff.ru/v2/'
         ]);
-        $initRequest = new InitRequest($post['amount'], 'order-'.date('ddmmYYYY').'-'.time());
+        $initRequest = new InitRequest($post['amount']*100, 'order-'.date('ddmmYYYY').'-'.time());
+        $initRequest
+            ->setDescription('Описание транзакции')
+            ->setNotificationURL('https://test152.ru/tbank_webhook')
+            ->setSuccessURL('https://client.test152.ru/tbank_success')
+            ->setFailURL('https://client.test152.ru/tbank_fail')
+            ->setPayType($initRequest::PAY_TYPE_ONE_STAGE);
         try {
             $response = $client->sendInitRequest($initRequest);
             $payment_id = $response->getPaymentId(); // идентификатор платежа
@@ -156,5 +162,15 @@ class Balance extends Base
         ]);
 
         return $balance;
+    }
+
+    public static function tbank_webhook($post) {
+        self::connect();
+        if(!empty($post['PaymentId'])){
+            if(!empty($post['Success']) and $post['Success'] == true){
+                $stmt = static::$pdo->prepare("UPDATE payment_orders SET status=1 WHERE payment_id=:payment_id");
+                $stmt->execute(['payment_id' => $post['PaymentId']]);
+            }
+        }
     }
 }
