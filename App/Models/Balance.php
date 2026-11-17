@@ -21,7 +21,9 @@ class Balance extends Base
             $qtys = json_encode($qtys);
         }
 
-        $client = new TinkoffAcquiringAPIClient('1794229583583DEMO', 'hGYO8REMbB5Fu5mE');
+        $client = new TinkoffAcquiringAPIClient('1794229583583DEMO', 'hGYO8REMbB5Fu5mE',[
+            'base_uri' => 'https://rest-api-test.tinkoff.ru/v2/'
+        ]);
         $initRequest = new InitRequest($post['amount'], 'order-'.date('ddmmYYYY').'-'.time());
         try {
             $response = $client->sendInitRequest($initRequest);
