@@ -86,6 +86,24 @@ class Api extends Base
         return ['status' => 'ok','discounts' => $discounts];
     }
 
+
+
+    public static function check_availability($main_data){
+        $post = self::post();
+        $post['user_id'] = $main_data['user_id'];
+        $prices = Balance::get_prices();
+        $balance = Balance::calc_balance($main_data['user_id']);
+        $check_qty = false;
+        $check_amount = false;
+        if($balance['pack_'.$post['check_type']] > 0){
+            $check_qty = true;
+        }
+        if($balance['amount'] >= $prices[$post['check_type']]){
+            $check_amount = true;
+        }
+        return ['status' => 'ok', 'check_qty' => $check_qty, 'check_amount' => $check_amount];
+    }
+
     public static function add_to_check_queue($main_data){
         $post = self::post();
         $post['user_id'] = $main_data['user_id'];
