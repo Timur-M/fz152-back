@@ -9,7 +9,7 @@ class Result extends Base
         
         $stmt = static::$pdo->prepare("INSERT INTO check_results (date_time,user_id,site_id,check_type,
         doc_urls,recom_url_token,amount,recom_content) VALUES (NOW() AT TIME ZONE 'UTC',:user_id,:site_id,:check_type,
-        :doc_urls,:recom_url_token,:amount,:recom_content)");
+        :doc_urls,:recom_url_token,:amount,:recom_content) RETURNING id");
         $stmt->execute([
             'user_id' => $post['user_id'],
             'site_id' => $post['site_id'],
@@ -20,7 +20,8 @@ class Result extends Base
             'recom_content' => json_encode($post['result'],JSON_UNESCAPED_UNICODE),
         ]);
         
-        return true;
+        $result = $stmt->fetch();
+        return $result;
     }
 
     public static function get_result($post){
@@ -47,6 +48,17 @@ class Result extends Base
          FROM check_results WHERE site_id = :id");
         $stmt->execute([
             'id' => $post['id'],
+        ]);
+        $result = $stmt->fetchAll();
+        return $result;
+    }
+
+    public static function update_result($post){
+        self::connect();
+        $stmt = static::$pdo->prepare("UPDATE check_results SET recom_content=:result, status=:status WHERE id=:id");
+        $stmt->execute([
+            'id' => $post['id'],
+            'result' => json_encode($post['result'],JSON_UNESCAPED_UNICODE),
         ]);
         $result = $stmt->fetchAll();
         return $result;

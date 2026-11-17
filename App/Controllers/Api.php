@@ -104,10 +104,40 @@ class Api extends Base
         return ['status' => 'ok', 'check_qty' => $check_qty, 'check_amount' => $check_amount];
     }
 
+    public static function check_set($main_data){
+        $post = self::post();
+        $post['user_id'] = $main_data['user_id'];
+        $return_data = ['status' => 'ok'];
+        if($post['action'] == 'qty'){
+            self::add_to_check_queue($main_data);
+        }
+        if($post['action'] == 'amount'){
+            $prices = Balance::get_prices();
+            $post['amount'] = $prices[$post['check_type']];
+            Balance::payment_from_balance($post);
+            self::add_to_check_queue($main_data);
+        }
+        if($post['action'] == 'pay'){
+            $prices = Balance::get_prices();
+            //$post['amount'] = $prices[$post['check_type']];
+            $post['pack_'.$post['check_type']] = 1;
+            $post['is_once'] = 1;
+            $payment_url = Balance::add_order($post);
+            $return_data['PaymentURL'] = $payment_url;
+        }
+        Balance::calc_balance($main_data['user_id']);
+        return $return_data;
+    }
+
     public static function add_to_check_queue($main_data){
         $post = self::post();
         $post['user_id'] = $main_data['user_id'];
-        $result = Queue::add_job($post);
+        $prices = Balance::get_prices();
+        $post['amount'] = $prices[$post['check_type']];
+        $post['result'] = '{}';
+        $result = Result::add_result($post);
+        $post['result_id'] = $result['id'];
+        $queue = Queue::add_job($post);
         return ['status' => 'ok'];
     }
 

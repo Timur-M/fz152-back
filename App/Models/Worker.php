@@ -38,12 +38,10 @@ class Worker extends Base
                 $amount = $prices['sec'];
             }
             if(!empty($result)){
-                Result::add_result([
-                    'user_id' => $s['user_id'],
-                    'site_id' => $s['id'],
-                    'check_type' => $j['check_type'],
+                Result::update_result([
+                    'id' => $j['result_id'],
                     'result' => $result,
-                    'amount' => $amount,
+                    'status' => 1,
                 ]);
                 // ok. delete job
                 $stmt = static::$pdo->prepare("DELETE FROM check_queue WHERE id=:id");

@@ -5,6 +5,8 @@ use JustCommunication\TinkoffAcquiringAPIClient\TinkoffAcquiringAPIClient;
 use JustCommunication\TinkoffAcquiringAPIClient\API\InitRequest;
 use JustCommunication\TinkoffAcquiringAPIClient\Exception\TinkoffAPIException;
 
+use App\Models\Queue;
+
 class Balance extends Base
 {
     public static function add_order($post){
@@ -26,7 +28,7 @@ class Balance extends Base
         ]);
         $initRequest = new InitRequest($post['amount']*100, 'order-'.date('ddmmYYYY').'-'.time());
         $initRequest
-            ->setDescription('Описание транзакции')
+            //->setDescription('Описание транзакции')
             ->setNotificationURL('https://test152.ru/tbank_webhook')
             ->setSuccessURL('https://client.test152.ru/tbank_success')
             ->setFailURL('https://client.test152.ru/tbank_fail')
@@ -38,14 +40,16 @@ class Balance extends Base
             $payment_url = $response->getPaymentURL(); 
             
             $stmt = static::$pdo->prepare("INSERT INTO payment_orders (user_id,amount,date_create,
-            is_auto_pay,qtys,payment_id) 
-            VALUES (:user_id,:amount,NOW() AT TIME ZONE 'UTC',:is_auto_pay,:qtys,:payment_id) RETURNING id");
+            is_auto_pay,qtys,payment_id,is_once,site_id) 
+            VALUES (:user_id,:amount,NOW() AT TIME ZONE 'UTC',:is_auto_pay,:qtys,:payment_id,:is_once,:site_id) RETURNING id");
             $stmt->execute([
                 'user_id' => $post['user_id'],
                 'amount' => $post['amount'],
                 'is_auto_pay' => !empty($post['is_auto_pay']) ? $post['is_auto_pay'] : 0,
                 'qtys' => !empty($qtys) ? $qtys : NUll,
                 'payment_id' => $payment_id,
+                'is_once' => !empty($post['is_once']) ? (int)$post['is_once'] : 0,
+                'site_id' => !empty($post['site_id']) ? (int)$post['site_id'] : NULL,
             ]);
             $result = $stmt->fetch();
             
@@ -168,9 +172,31 @@ class Balance extends Base
         self::connect();
         if(!empty($post['PaymentId'])){
             if(!empty($post['Success']) and $post['Success'] == true){
-                $stmt = static::$pdo->prepare("UPDATE payment_orders SET status=1 WHERE payment_id=:payment_id");
+                $stmt = static::$pdo->prepare("UPDATE payment_orders SET status=1 WHERE payment_id=:payment_id
+                RETURNING qtys,is_once,site_id");
                 $stmt->execute(['payment_id' => $post['PaymentId']]);
+                $result = $stmt->fetch();
+                if($result['is_once']){
+                    $qtys = json_decode($result['qtys']);
+                    $check_type = str_replace('pack_','',(count($qtys)>1 ? $qtys[0]: $qtys));
+                    Queue::add_job([
+                        'site_id' => $result['site_id'],
+                        'check_type' => $check_type,
+                    ]);
+                }
             }
         }
+    }
+
+    public static function payment_from_balance($post){
+        self::connect();
+        $stmt = static::$pdo->prepare("INSERT INTO payment_orders (user_id,from_balance,date_create) 
+            VALUES (:user_id,:from_balance,NOW() AT TIME ZONE 'UTC') RETURNING id");
+            $stmt->execute([
+                'user_id' => $post['user_id'],
+                'from_balance' => $post['amount'],
+            ]);
+            $result = $stmt->fetch();
+        return $result;
     }
 }
