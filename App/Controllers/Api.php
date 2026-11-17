@@ -72,8 +72,8 @@ class Api extends Base
     public static function add_order($main_data){
         $post = self::post();
         $post['user_id'] = $main_data['user_id'];
-        $user = Balance::add_order($post);
-        return ['status' => 'ok'];
+        $payment_url = Balance::add_order($post);
+        return ['status' => 'ok','PaymentURL' => $payment_url];
     }
 
     public static function get_prices($main_data){

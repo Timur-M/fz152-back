@@ -1,6 +1,9 @@
 <?php
 
 namespace App\Models;
+use JustCommunication\TinkoffAcquiringAPIClient\TinkoffAcquiringAPIClient;
+use JustCommunication\TinkoffAcquiringAPIClient\API\InitRequest;
+use JustCommunication\TinkoffAcquiringAPIClient\Exception\TinkoffAPIException;
 
 class Balance extends Base
 {
@@ -18,16 +21,34 @@ class Balance extends Base
             $qtys = json_encode($qtys);
         }
 
-        $stmt = static::$pdo->prepare("INSERT INTO payment_orders (user_id,amount,date_create,is_auto_pay,qtys) 
-        VALUES (:user_id,:amount,NOW() AT TIME ZONE 'UTC',:is_auto_pay,:qtys) RETURNING id");
-        $stmt->execute([
-            'user_id' => $post['user_id'],
-            'amount' => $post['amount'],
-            'is_auto_pay' => !empty($post['is_auto_pay']) ? $post['is_auto_pay'] : 0,
-            'qtys' => !empty($qtys) ? $qtys : NUll,
-        ]);
-        $result = $stmt->fetch();
-        return $result;
+        $client = new TinkoffAcquiringAPIClient('1794229583583DEMO', 'hGYO8REMbB5Fu5mE');
+        $initRequest = new InitRequest($post['amount'], 'order-'.date('ddmmYYYY').'-'.time());
+        try {
+            $response = $client->sendInitRequest($initRequest);
+            $payment_id = $response->getPaymentId(); // идентификатор платежа
+
+            $payment_url = $response->getPaymentURL(); 
+            
+            $stmt = static::$pdo->prepare("INSERT INTO payment_orders (user_id,amount,date_create,
+            is_auto_pay,qtys,payment_id) 
+            VALUES (:user_id,:amount,NOW() AT TIME ZONE 'UTC',:is_auto_pay,:qtys,:payment_id) RETURNING id");
+            $stmt->execute([
+                'user_id' => $post['user_id'],
+                'amount' => $post['amount'],
+                'is_auto_pay' => !empty($post['is_auto_pay']) ? $post['is_auto_pay'] : 0,
+                'qtys' => !empty($qtys) ? $qtys : NUll,
+                'payment_id' => $payment_id,
+            ]);
+            $result = $stmt->fetch();
+            
+            return $payment_url;
+        
+        
+        } catch (TinkoffAPIException $e) {
+            // обработка ошибки
+        }
+
+        
     }    
 
     public static function calc_discount($post){
