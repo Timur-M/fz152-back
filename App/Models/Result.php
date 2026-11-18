@@ -64,4 +64,26 @@ class Result extends Base
         $result = $stmt->fetchAll();
         return $result;
     }
+
+    public static function get_txt($post){
+        self::connect();
+        $stmt = static::$pdo->prepare("SELECT recom_content FROM check_results WHERE id=:id");
+        $stmt->execute(['id' => $post['id']]);
+        $result = $stmt->fetch();
+        $arr = json_decode($result['recom_content'], true);
+        $txt = '';
+        foreach($arr['checks'] as $c){
+            $txt .= $c['title']. "\r\n";
+            foreach($c['items'] as $i){
+                $txt .= '  ';
+                $txt .= $i['ok'] ? 'v' : 'x';
+                $txt .= ' - ';
+                $txt .= $i['text']."\r\n";
+            }
+        }
+        $url = 'result-'.$post['id'].'.txt';
+        $filename = $_SERVER['DOCUMENT_ROOT'].'/txt-files/'.$url;
+        file_put_contents($filename, $txt);
+        return $url;
+    }
 }

@@ -180,4 +180,11 @@ class Api extends Base
         Balance::tbank_webhook($post);
         echo 'OK';
     }
+
+    public static function get_result_txt($main_data){
+        $post = self::post();
+        $post['user_id'] = $main_data['user_id'];
+        $url = Result::get_txt($post);
+        return ['status' => 'ok', 'url' => $url];
+    }
 }
