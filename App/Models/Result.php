@@ -80,8 +80,9 @@ class Result extends Base
                 $txt .= ' - ';
                 $txt .= $i['text']."\r\n";
             }
-            if (!empty($c['advice'])) $txt .= $c['advice']."\r\n";
-            if (!empty($c['summary'])) $txt .= $c['summary']."\r\n";
+            if (!empty($c['advice'])) $txt .= '  '.$c['advice']."\r\n";
+            if (!empty($c['summary'])) $txt .= '  '.$c['summary']."\r\n";
+            $txt .= "\r\n";
         }
         $url = 'result-'.$post['id'].'.txt';
         $filename = $_SERVER['DOCUMENT_ROOT'].'/txt-files/'.$url;
