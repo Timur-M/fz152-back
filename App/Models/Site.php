@@ -19,7 +19,7 @@ class Site extends Base
     public static function get_sites(array $post){
         self::connect();
         $stmt = static::$pdo->prepare("SELECT *,
-            to_char((date_add + interval '3 hours'),'DD-MM-YYYY HH24:MI') as date_add, 
+            to_char((date_add + interval '3 hours'),'DD-MM-YYYY HH24:MI') as date_add
             FROM sites WHERE user_id = :user_id ORDER BY id");
         $stmt->execute([
             'user_id' => $post['user_id'],
@@ -31,7 +31,7 @@ class Site extends Base
     public static function get_site(array $post){
         self::connect();
         $stmt = static::$pdo->prepare("SELECT *,
-            to_char((date_add + interval '3 hours'),'DD-MM-YYYY HH24:MI') as date_add, 
+            to_char((date_add + interval '3 hours'),'DD-MM-YYYY HH24:MI') as date_add 
             FROM sites WHERE id = :id");
         $stmt->execute([
             'id' => $post['id'],
