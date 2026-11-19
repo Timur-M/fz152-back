@@ -4,6 +4,7 @@ namespace App\Models;
 use App\Models\Full_check;
 use App\Models\Result;
 use App\Models\Balance;
+use App\Models\Site;
 
 class Worker extends Base
 {
@@ -53,6 +54,12 @@ class Worker extends Base
                 $stmt->execute(['id' => $j['id']]);
                 $work_result .= 'site-'.$s['id'].', check: '.$j['check_type'].' - error'.PHP_EOL;
             }
+            date_default_timezone_set('UTC');
+            Site::update_site([
+                'id' => $j['site_id'],
+                'worker_last_check' => date('Y-m-d H:i:s'),
+                'check_type' => $j['check_type'],
+            ]);
         }
         
         return $work_result;

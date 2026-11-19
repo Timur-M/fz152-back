@@ -52,6 +52,10 @@ class Site extends Base
     public static function update_site(array $post){
         self::connect();
         
+        $stmt = static::$pdo->prepare("SELECT * FROM sites WHERE id = :id");
+        $stmt->execute(['id' => $post['id']]);
+        $site = $stmt->fetch();
+
         $bind = ['id' => $post['id']];
         $upd = [];
         if(!empty($post['check_sets'])){
@@ -62,6 +66,13 @@ class Site extends Base
         if(isset($post['is_check_law_change'])){
             $upd[] = ' is_check_law_change = :is_check_law_change ';
             $bind['is_check_law_change'] = (int)$post['is_check_law_change'];
+        } 
+
+        if(isset($post['worker_last_check'])){
+            $last_checks = json_decode($site['last_checks'],true);
+            $last_checks[$post['check_type']] = $post['worker_last_check'];
+            $upd[] = ' last_checks = :last_checks ';
+            $bind['last_checks'] = json_encode($last_checks);
         } 
         
         if(!empty($upd)){
