@@ -54,14 +54,11 @@ class Site extends Base
         
         $bind = ['id' => $post['id']];
         $upd = [];
-        if(!empty($post['check_period_152'])){
-            $upd[] = ' check_period_152 = :check_period_152 ';
-            $bind['check_period_152'] = $post['check_period_152'];
+        if(!empty($post['check_sets'])){
+            $upd[] = ' check_sets = :check_sets ';
+            $bind['check_sets'] = json_encode($post['check_sets']);
         } 
-        if(!empty($post['check_period_sec'])){
-            $upd[] = ' check_period_sec = :check_period_sec ';
-            $bind['check_period_sec'] = $post['check_period_sec'];
-        } 
+        
         if(isset($post['is_check_law_change'])){
             $upd[] = ' is_check_law_change = :is_check_law_change ';
             $bind['is_check_law_change'] = (int)$post['is_check_law_change'];
