@@ -20,8 +20,6 @@ class Site extends Base
         self::connect();
         $stmt = static::$pdo->prepare("SELECT *,
             to_char((date_add + interval '3 hours'),'DD-MM-YYYY HH24:MI') as date_add, 
-            to_char((last_152_check + interval '3 hours'),'DD-MM-YYYY HH24:MI') as last_152_check,
-            to_char((last_152_check + interval '3 hours'),'DD-MM-YYYY HH24:MI') as last_sec_check 
             FROM sites WHERE user_id = :user_id ORDER BY id");
         $stmt->execute([
             'user_id' => $post['user_id'],
@@ -34,8 +32,6 @@ class Site extends Base
         self::connect();
         $stmt = static::$pdo->prepare("SELECT *,
             to_char((date_add + interval '3 hours'),'DD-MM-YYYY HH24:MI') as date_add, 
-            to_char((last_152_check + interval '3 hours'),'DD-MM-YYYY HH24:MI') as last_152_check,
-            to_char((last_152_check + interval '3 hours'),'DD-MM-YYYY HH24:MI') as last_sec_check 
             FROM sites WHERE id = :id");
         $stmt->execute([
             'id' => $post['id'],
