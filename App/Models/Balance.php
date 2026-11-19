@@ -190,11 +190,13 @@ class Balance extends Base
 
     public static function payment_from_balance($post){
         self::connect();
-        $stmt = static::$pdo->prepare("INSERT INTO payment_orders (user_id,from_balance,date_create) 
-            VALUES (:user_id,:from_balance,NOW() AT TIME ZONE 'UTC') RETURNING id");
+        $stmt = static::$pdo->prepare("INSERT INTO payment_orders (user_id,from_balance,date_create,qtys,status) 
+            VALUES (:user_id,:from_balance,NOW() AT TIME ZONE 'UTC',:qtys,:status) RETURNING id");
             $stmt->execute([
                 'user_id' => $post['user_id'],
                 'from_balance' => $post['amount'],
+                'qtys' => json_encode(['pack_'.$post['check_type'] => 1]),
+                'status' => 1,
             ]);
             $result = $stmt->fetch();
         return $result;
