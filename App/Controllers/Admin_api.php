@@ -23,8 +23,8 @@ class admin_api extends Base
 
     public static function get_sites($main_data){
         $post = self::post();
-        $sites = Admin_site::get_sites();
-        return ['status' => 'ok', 'sites' => $sites];
+        $result = Admin_site::get_sites();
+        return ['status' => 'ok', 'result' => $result];
     }
 
     public static function get_users($main_data){

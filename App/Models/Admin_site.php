@@ -8,11 +8,28 @@ class Admin_site extends Base
 
     public static function get_sites(array $post = []){
         self::connect();
+
+        $conditions = '';
+        $order = 'id';
+
+        $stmt = static::$pdo->prepare("SELECT COUNT(*) as total FROM sites s WHERE 1=1 ".$conditions);
+        $stmt->execute([]);
+        $count = $stmt->fetchAll();
+
+        $total = $count['total'];
+
+        $per_page = 10;
+
+        $pages = ceil($total/$per_page);
+        $page = $post['page'];
+        $start = $page*$per_page-$per_page;
+        $limit = ' LIMIT '.$per_page.' OFFSET '.$start;
+
         $stmt = static::$pdo->prepare("SELECT s.*, u.email as user_email,
             to_char((s.date_add + interval '3 hours'),'DD-MM-YYYY HH24:MI') as date_add
             FROM sites s
             LEFT JOIN users u ON s.user_id = u.id
-            ORDER BY id");
+            ORDER BY ".$order." ".$limit);
         $stmt->execute([]);
         
         foreach($stmt->fetchAll() as $s){
@@ -27,7 +44,7 @@ class Admin_site extends Base
             }
             $result[] = $s;
         }
-        return $result;
+        return ['result' => $result, 'total_pages' => $total];
     }
 
     
