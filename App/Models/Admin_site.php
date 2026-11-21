@@ -14,14 +14,17 @@ class Admin_site extends Base
 
         $stmt = static::$pdo->prepare("SELECT COUNT(*) as total FROM sites s WHERE 1=1 ".$conditions);
         $stmt->execute([]);
-        $count = $stmt->fetchAll();
+        $count = $stmt->fetch();
 
         $total = $count['total'];
 
         $per_page = 10;
 
         $pages = ceil($total/$per_page);
-        $page = $post['page'];
+        $page = 1;
+        if(!empty($post['page'])){
+            $page = $post['page'];
+        }
         $start = $page*$per_page-$per_page;
         $limit = ' LIMIT '.$per_page.' OFFSET '.$start;
 
@@ -44,7 +47,7 @@ class Admin_site extends Base
             }
             $result[] = $s;
         }
-        return ['result' => $result, 'total_pages' => $total];
+        return ['result' => $result, 'total_pages' => $pages];
     }
 
     
