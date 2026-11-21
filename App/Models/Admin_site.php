@@ -16,7 +16,7 @@ class Admin_site extends Base
         $stmt->execute([]);
         
         foreach($stmt->fetchAll() as $s){
-            $last_checks = json_decode($s['last_checks']);
+            $last_checks = json_decode($s['last_checks'],true);
             if ($last_checks) foreach($last_checks as $lc_k => $lc_v){
                 $date = new \DateTimeImmutable($lc_v);
                 $newDate = $date->modify('+3 hours');
