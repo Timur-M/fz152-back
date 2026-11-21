@@ -10,8 +10,6 @@ class Admin_site extends Base
         self::connect();
         $stmt = static::$pdo->prepare("SELECT s.*, u.email as user_email,
             to_char((s.date_add + interval '3 hours'),'DD-MM-YYYY HH24:MI') as date_add, 
-            to_char((s.last_152_check + interval '3 hours'),'DD-MM-YYYY HH24:MI') as last_152_check,
-            to_char((s.last_152_check + interval '3 hours'),'DD-MM-YYYY HH24:MI') as last_sec_check 
             FROM sites s
             LEFT JOIN users u ON s.user_id = u.id
             ORDER BY id");
