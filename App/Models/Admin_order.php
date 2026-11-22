@@ -35,7 +35,7 @@ class Admin_order extends Base
         $stmt->execute([]);
          
         foreach($stmt->fetchAll() as $o){
-            $o['qtys'] = json_decode($o['qtys'],true);
+            if($o['qtys']) $o['qtys'] = json_decode($o['qtys'],true);
             $result[] = $o; 
         }
 
