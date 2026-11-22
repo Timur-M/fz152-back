@@ -8,6 +8,9 @@ class Admin_user extends Base
         self::connect();
 
         $conditions = '';
+        if(!empty($post['search'])){
+            $conditions .= " AND email like '%".htmlspecialchars($post['search'])."%'  ";
+        }
         $order = 'id';
 
         $stmt = static::$pdo->prepare("SELECT COUNT(*) as total FROM users WHERE 1=1 ".$conditions);
@@ -28,7 +31,7 @@ class Admin_user extends Base
 
         $stmt = static::$pdo->prepare("SELECT u.*,
         to_char((u.date_add + interval '3 hours'),'DD-MM-YYYY HH24:MI') as date_add
-         FROM users u WHERE 1=1
+         FROM users u WHERE 1=1 ".$conditions."
          ORDER BY ".$order." ".$limit);
         $stmt->execute([]);
         $result = $stmt->fetchAll();
