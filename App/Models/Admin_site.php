@@ -10,6 +10,10 @@ class Admin_site extends Base
         self::connect();
 
         $conditions = '';
+        if(!empty($post['search'])){
+            $conditions .= " AND (s.url like '%".htmlspecialchars($post['search'])."%' ";
+            $conditions .= " OR user_email like '%".htmlspecialchars($post['search'])."%' ) ";
+        }
         $order = 'id';
 
         $stmt = static::$pdo->prepare("SELECT COUNT(*) as total FROM sites s WHERE 1=1 ".$conditions);
