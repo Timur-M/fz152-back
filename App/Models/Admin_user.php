@@ -32,7 +32,7 @@ class Admin_user extends Base
          ORDER BY ".$order." ".$limit);
         $stmt->execute([]);
         $result = $stmt->fetchAll();
-        return $result;
+        return ['result' => $result, 'total_pages' => $pages];
     }    
 
 }
