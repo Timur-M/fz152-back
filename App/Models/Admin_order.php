@@ -33,7 +33,11 @@ class Admin_order extends Base
          WHERE 1=1
          ORDER BY ".$order." ".$limit);
         $stmt->execute([]);
-        $result = $stmt->fetchAll();
+         
+        foreach($stmt->fetchAll() as $o){
+            $o['qtys'] = json_decode($o['qtys'],true);
+            $result[] = $o; 
+        }
 
         return ['result' => $result, 'total_pages' => $pages];
     }    
