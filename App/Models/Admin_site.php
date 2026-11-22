@@ -16,7 +16,9 @@ class Admin_site extends Base
         }
         $order = 'id';
 
-        $stmt = static::$pdo->prepare("SELECT COUNT(*) as total FROM sites s WHERE 1=1 ".$conditions);
+        $stmt = static::$pdo->prepare("SELECT COUNT(*) as total FROM sites s 
+        LEFT JOIN users u ON s.user_id = u.id
+        WHERE 1=1 ".$conditions);
         $stmt->execute([]);
         $count = $stmt->fetch();
 
@@ -36,6 +38,7 @@ class Admin_site extends Base
             to_char((s.date_add + interval '3 hours'),'DD-MM-YYYY HH24:MI') as date_add
             FROM sites s
             LEFT JOIN users u ON s.user_id = u.id
+            WHERE 1=1 ".$conditions."
             ORDER BY ".$order." ".$limit);
         $stmt->execute([]);
         
