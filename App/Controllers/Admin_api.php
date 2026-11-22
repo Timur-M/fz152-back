@@ -30,7 +30,7 @@ class admin_api extends Base
     public static function get_users($main_data){
         $post = self::post();
         $users = Admin_user::get_users($post);
-        return ['status' => 'ok', 'users' => $users];
+        return ['status' => 'ok', 'result' => $users];
     }
 
     public static function get_orders($main_data){
