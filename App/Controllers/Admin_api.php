@@ -35,8 +35,8 @@ class admin_api extends Base
 
     public static function get_orders($main_data){
         $post = self::post();
-        $orders = Admin_order::get_orders();
-        return ['status' => 'ok', 'orders' => $orders];
+        $orders = Admin_order::get_orders($post);
+        return ['status' => 'ok', 'result' => $orders];
     }
 
     public static function get_prices_and_discounts($main_data){
