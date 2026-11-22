@@ -15,7 +15,7 @@ class Admin_order extends Base
 
         $total = $count['total'];
 
-        $per_page = 10;
+        $per_page = 5;
 
         $pages = ceil($total/$per_page);
         $page = 1;
