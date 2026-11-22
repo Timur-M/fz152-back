@@ -12,6 +12,9 @@ class Admin_user extends Base
             $conditions .= " AND email like '%".htmlspecialchars($post['search'])."%'  ";
         }
         $order = 'id';
+        if(!empty($post['list_order'])){
+            $order = ' date_add '.$post['list_order'];
+        }
 
         $stmt = static::$pdo->prepare("SELECT COUNT(*) as total FROM users WHERE 1=1 ".$conditions);
         $stmt->execute([]);
