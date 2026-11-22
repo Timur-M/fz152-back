@@ -12,7 +12,7 @@ class Admin_site extends Base
         $conditions = '';
         if(!empty($post['search'])){
             $conditions .= " AND (s.url like '%".htmlspecialchars($post['search'])."%' ";
-            $conditions .= " OR user_email like '%".htmlspecialchars($post['search'])."%' ) ";
+            $conditions .= " OR u.email like '%".htmlspecialchars($post['search'])."%' ) ";
         }
         $order = 'id';
 
